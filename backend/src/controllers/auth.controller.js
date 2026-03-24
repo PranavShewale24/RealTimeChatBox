@@ -98,6 +98,7 @@ console.log("API KEY:", process.env.CLOUDINARY_API_KEY,process.env.CLOUDINARY_CL
 export const checkAuth=(req,res)=>{
   try{
     res.status(200).json(req.user);
+    console.log("User authenticated",req.user);
   }
   catch(error){
     console.log(error,"Error checking authentication");

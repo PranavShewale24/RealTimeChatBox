@@ -7,6 +7,6 @@ router.post("/login",login);
 router.post("/signup",signup);
 router.post("/logout",logout);
 router.post("/update-profile",protectRoute,updateProfile); 
-router.get("/checked",protectRoute,checkAuth);
+router.get("/check",protectRoute,checkAuth);
 
 export default router;

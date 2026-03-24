@@ -1,35 +1,31 @@
-import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-import { generateToken } from "../lib/utils.js";
-import cookieParser from "cookie-parser";
-dotenv.config();
-export const protectRoute=async(req,res,next)=>{
-    try{
+import User from "../models/user.model.js";
 
-        const token =req.cookies.token
-        console.log(req.cookies);
-        console.log("Token:", token);
-        if(!token){
-           return res.status(404).json({message:"Not authorized, token failed"}); 
-        }
-        const decoded=jwt.verify(token,process.env.JWT_SECRET);
-         if(!decoded){
-            return res.status(401).json({message:"Not authorized,token failed"});
-         }
-         const user = await User.findById(decoded.userId).select("-password");
+export const protectRoute = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
 
-         if(!user){
-            return res.status(404).json({message:"Not authorized, user not found"});
-         }
-         else{
-            req.user=user;
-
-            next(); 
-    }}
-    catch(error){
-        console.log(error);
-        return res.status(401).json({message:"Not authorized, token failed"});
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized - No Token Provided" });
     }
 
-}
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized - Invalid Token" });
+    }
+
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    req.user = user;
+
+    next();
+  } catch (error) {
+    console.log("Error in protectRoute middleware: ", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
