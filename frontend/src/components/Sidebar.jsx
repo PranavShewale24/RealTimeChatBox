@@ -6,7 +6,8 @@ import { Users } from "lucide-react";
 import toast from "react-hot-toast";
 import avatar from "../assets/avatar.png";
 const Sidebar = () => {
-  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, unreadMessages } =
+    useChatStore();
 
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
@@ -26,7 +27,7 @@ const Sidebar = () => {
       <div className="border-b border-base-300 w-full p-5">
         <div className="flex items-center gap-2">
           <Users className="size-6" />
-          <span className="font-medium hidden lg:block">Contacts</span>
+          <span className="font-medium hidden lg:block">Friends</span>
         </div>
         {/* TODO: Online filter toggle */}
         <div className="mt-3 hidden lg:flex items-center gap-2">
@@ -66,6 +67,12 @@ const Sidebar = () => {
                   rounded-full ring-2 ring-zinc-900"
                 />
               )}
+
+              {Boolean(unreadMessages[user._id]) && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-primary text-primary-content text-xs flex items-center justify-center">
+                  {unreadMessages[user._id] > 9 ? "9+" : unreadMessages[user._id]}
+                </span>
+              )}
             </div>
 
             {/* User info - only visible on larger screens */}
@@ -79,7 +86,7 @@ const Sidebar = () => {
         ))}
 
         {filteredUsers.length === 0 && (
-          <div className="text-center text-zinc-500 py-4">No online users</div>
+          <div className="text-center text-zinc-500 py-4">No friends yet</div>
         )}
       </div>
     </aside>

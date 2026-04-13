@@ -31,6 +31,18 @@ const userSchema=mongoose.Schema(
             type:String,
             default:""
         },
+        friends:[{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User"
+        }],
+        incomingFriendRequests:[{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User"
+        }],
+        outgoingFriendRequests:[{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User"
+        }],
     },{timestamps:true}
 );
 const User =mongoose.model("User",userSchema);

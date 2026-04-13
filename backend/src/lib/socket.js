@@ -15,6 +15,14 @@ export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
+export function isUserOnline(userId) {
+  return Boolean(userSocketMap[userId]);
+}
+
+export function getOnlineUserIds() {
+  return Object.keys(userSocketMap);
+}
+
 // used to store online users
 const userSocketMap = {}; // {userId: socketId}
 

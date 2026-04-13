@@ -7,14 +7,17 @@ export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
   selectedUser: null,
+  unreadMessages: {},
   isUsersLoading: false,
   isMessagesLoading: false,
+  activeChatMessageHandler: null,
+  notificationMessageHandler: null,
 
   getUsers: async () => {
     set({ isUsersLoading: true });
     try {
-      const res = await axiosInstance.get("/messages/users");
-      set({ users: res.data });
+      const res = await axiosInstance.get("/friends");
+      set({ users: res.data.friends || [] });
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
@@ -48,21 +51,78 @@ export const useChatStore = create((set, get) => ({
     if (!selectedUser) return;
 
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
 
-    socket.on("newMessage", (newMessage) => {
+    const { activeChatMessageHandler } = get();
+    if (activeChatMessageHandler) {
+      socket.off("newMessage", activeChatMessageHandler);
+    }
+
+    const handler = (newMessage) => {
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
       if (!isMessageSentFromSelectedUser) return;
 
       set({
         messages: [...get().messages, newMessage],
       });
-    });
+    };
+
+    socket.on("newMessage", handler);
+    set({ activeChatMessageHandler: handler });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
-    socket.off("newMessage");
+    const { activeChatMessageHandler } = get();
+    if (socket && activeChatMessageHandler) {
+      socket.off("newMessage", activeChatMessageHandler);
+      set({ activeChatMessageHandler: null });
+    }
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  initializeMessageNotifications: () => {
+    const socket = useAuthStore.getState().socket;
+    if (!socket || get().notificationMessageHandler) return;
+
+    const handler = (newMessage) => {
+      const { selectedUser, users, unreadMessages } = get();
+      const isCurrentChat = selectedUser?._id === newMessage.senderId;
+      if (isCurrentChat) return;
+
+      const sender = users.find((user) => user._id === newMessage.senderId);
+      const senderName = sender?.fullName || "your friend";
+
+      set({
+        unreadMessages: {
+          ...unreadMessages,
+          [newMessage.senderId]: (unreadMessages[newMessage.senderId] || 0) + 1,
+        },
+      });
+
+      toast.success(`New message from ${senderName}`);
+    };
+
+    socket.on("newMessage", handler);
+    set({ notificationMessageHandler: handler });
+  },
+
+  cleanupMessageNotifications: () => {
+    const socket = useAuthStore.getState().socket;
+    const { notificationMessageHandler } = get();
+    if (socket && notificationMessageHandler) {
+      socket.off("newMessage", notificationMessageHandler);
+      set({ notificationMessageHandler: null });
+    }
+  },
+
+  setSelectedUser: (selectedUser) =>
+    set((state) => ({
+      selectedUser,
+      unreadMessages: selectedUser
+        ? {
+            ...state.unreadMessages,
+            [selectedUser._id]: 0,
+          }
+        : state.unreadMessages,
+    })),
 }));
