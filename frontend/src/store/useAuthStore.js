@@ -9,6 +9,7 @@ export const useAuthStore = create((set, get) => ({
   authUser: null,
   isSigningUp: false,
   isLoggingIn: false,
+  isGoogleLoggingIn: false,
   isUpdatingProfile: false,
   isCheckingAuth: true,
   onlineUsers: [],
@@ -54,6 +55,20 @@ export const useAuthStore = create((set, get) => ({
       toast.error(error.response.data.message);
     } finally {
       set({ isLoggingIn: false });
+    }
+  },
+
+  googleLogin: async (idToken) => {
+    set({ isGoogleLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/google", { idToken });
+      set({ authUser: res.data });
+      toast.success("Logged in with Google");
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Google login failed");
+    } finally {
+      set({ isGoogleLoggingIn: false });
     }
   },
 

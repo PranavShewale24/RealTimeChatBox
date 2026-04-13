@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User } from "lucide-re
 import { Link } from "react-router-dom";
 
 import AuthImagePattern from "../components/AuthImagePattern";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import toast from "react-hot-toast";
 
 const SignUpPage = () => {
@@ -14,7 +15,7 @@ const SignUpPage = () => {
     password: "",
   });
 
-  const { signup, isSigningUp } = useAuthStore();
+  const { signup, googleLogin, isSigningUp, isGoogleLoggingIn } = useAuthStore();
 
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
@@ -129,6 +130,9 @@ const SignUpPage = () => {
                 "Create Account"
               )}
             </button>
+
+            <div className="divider">OR</div>
+            <GoogleSignInButton onCredential={googleLogin} disabled={isGoogleLoggingIn} />
           </form>
 
           <div className="text-center">

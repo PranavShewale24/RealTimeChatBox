@@ -2,6 +2,9 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -25,6 +28,7 @@ export const signup = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      authProvider: "local",
     });
 
     if (newUser) {
@@ -56,6 +60,10 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    if (!user.password) {
+      return res.status(400).json({ message: "Use Google Sign-In for this account" });
+    }
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -75,9 +83,68 @@ export const login = async (req, res) => {
   }
 };
 
+export const googleAuth = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ message: "Google token is required" });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ message: "Google auth is not configured on server" });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload?.sub || payload.email_verified !== true) {
+      return res.status(401).json({ message: "Invalid Google account" });
+    }
+
+    const { email, name, picture, sub } = payload;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        fullName: name || email.split("@")[0],
+        profilePic: picture || "",
+        authProvider: "google",
+        googleId: sub,
+      });
+    } else {
+      const updates = {};
+
+      if (!user.googleId) updates.googleId = sub;
+      if (!user.profilePic && picture) updates.profilePic = picture;
+
+      if (Object.keys(updates).length > 0) {
+        user = await User.findByIdAndUpdate(user._id, updates, { new: true });
+      }
+    }
+
+    generateToken(user._id, res);
+
+    return res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic,
+    });
+  } catch (error) {
+    console.log("Error in googleAuth controller", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const logout = (req, res) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0 });
+    res.cookie("token", "", { maxAge: 0 });
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.log("Error in logout controller", error.message);
